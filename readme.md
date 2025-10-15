@@ -30,9 +30,9 @@ go run main.go compiler/testdata/
 Usage:
 
 ```plaintext
-Usage of jackanalyser:
-		JackAnalyzer myProg/FileName.jack
-		JackAnalyzer myProg/
+Usage of JackCompiler:
+		JackCompiler myProg/FileName.jack
+		JackCompiler myProg/
 ```
 
 The program will generate an analysis XML file on the path `vm\testdata\FileName.xml` or `vm\testdata\jackFile.xml` in case of a folder.
@@ -53,7 +53,7 @@ docker build -t dd-jack-analyzer .
 # running
 docker run -d dd-jack-analyzer
 # grab the container ID and run
-docker cp $CONTAINER:/app/JackAnalyzer .
+docker cp $CONTAINER:/app/JackCompiler .
 ```
 
 ## Copyright

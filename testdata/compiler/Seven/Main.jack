@@ -1,0 +1,31 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/11/Seven/Main.jack
+/**
+ * Computes the value of 1 + (2 * 3) and prints the result
+ * at the top-left of the screen.  
+ */
+class Main {
+
+   function void main() {
+      var int x, y;
+      let y = 1;
+      let x = sqrt(y);
+      do Output.printInt(x);
+      return;
+   }
+
+   function int sqrt(int x) {
+      var int g, prevg, epsilon;
+      let epsilon = 1;
+      let g = x / 2; // initial guess
+      while (true) {
+         let prevg = g;
+         let g = (g + x / g) / 2;
+         if (abs(prevg - g) < epsilon) {
+            return g;
+         }
+      }
+   }
+}

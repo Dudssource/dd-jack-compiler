@@ -3,6 +3,6 @@
 all : app
 
 # Link the object files and dependent libraries into a binary
-app : JackAnalyzer
-	@chmod +x JackAnalyzer
+app : JackCompiler
+	@chmod +x JackCompiler
 

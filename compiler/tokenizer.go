@@ -67,6 +67,9 @@ func (tkn *jackTokenizer) readChar() (rune, bool) {
 		}
 		panic(err)
 	}
+	if ch == '\n' {
+		tkn.lineNo++
+	}
 	return ch, true
 }
 
@@ -138,7 +141,6 @@ func (tkn *jackTokenizer) getNextToken() (*Token, bool) {
 			return newToken(Symbol, string(ch), tkn.lineNo), true
 
 		case '\n', '\r': // line break
-			tkn.lineNo++
 			continue
 
 		case '"': // string constant

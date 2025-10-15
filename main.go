@@ -33,9 +33,9 @@ func main() {
 
 	// validate src
 	if len(args) != 2 {
-		log.Println(`Usage of jackanalyser:
-		JackAnalyzer myProg/FileName.jack
-		JackAnalyzer myProg/`)
+		log.Println(`Usage of jackcompiler:
+		JackCompiler myProg/FileName.jack
+		JackCompiler myProg/`)
 		os.Exit(0)
 	}
 
@@ -101,7 +101,7 @@ func analyse(srcPath, dstPath string) error {
 	defer srcFile.Close()
 
 	// create dst file
-	finalDstPath := filepath.Join(filepath.Dir(srcPath), dstPath+".xml")
+	finalDstPath := filepath.Join(filepath.Dir(srcPath), dstPath+".vm")
 	dstFile, err := os.Create(finalDstPath)
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func analyse(srcPath, dstPath string) error {
 	}
 
 	// ok
-	log.Printf("JACK Analyser finished successfully, output to %s\n", finalDstPath)
+	log.Printf("JACK Compiler finished successfully, output to %s\n", finalDstPath)
 
 	return nil
 }

@@ -1,0 +1,45 @@
+function Main.main 0
+	push constant 1
+	pop local 1
+	push local 1
+	call Main.sqrt 1
+	pop local 0
+	push local 0
+	call Output.printInt 1
+	pop temp 0
+	push constant 0
+	return
+function Main.sqrt 1
+	push constant 1
+	pop local 2
+	push argument 1
+	push constant 2
+	call Math.divide 2
+	pop local 0
+label Main_0
+	push constant 1
+	not
+	if-goto Main_1
+	push local 0
+	pop local 1
+	push local 0
+	push argument 1
+	add
+	push local 0
+	call Math.divide 2
+	push constant 2
+	call Math.divide 2
+	pop local 0
+	push local 1
+	push local 0
+	sub
+	call Main.abs 1
+	push local 2
+	lt
+	not
+	if-goto Main_2
+	push local 0
+	return
+label Main_2
+	goto Main_0
+label Main_1

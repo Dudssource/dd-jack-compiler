@@ -1,42 +1,44 @@
 package compiler
 
 import (
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
-	"runtime"
+	"strconv"
 	"strings"
 )
 
+var jackOSAPI = map[string]bool{
+	"Math":     true,
+	"String":   true,
+	"Array":    true,
+	"Output":   true,
+	"Screen":   true,
+	"Keyboard": true,
+	"Memory":   true,
+	"Sys":      true,
+}
+
 type compilationEngine struct {
 	tknzr          *jackTokenizer
-	dstFile        io.Writer
 	builder        *strings.Builder
 	errorList      []error
+	symbolTable    *symbolTable
+	className      string
+	writer         *vmWriter
 	isDebugEnabled bool
+	labelsCounter  int
 }
 
 func newCompilationEngine(tknzr *jackTokenizer, dstFile io.Writer) *compilationEngine {
 	return &compilationEngine{
 		tknzr:          tknzr,
-		dstFile:        dstFile,
 		builder:        &strings.Builder{},
+		symbolTable:    newSymbolTable(),
+		writer:         &vmWriter{dstFile: dstFile},
 		isDebugEnabled: strings.EqualFold(os.Getenv("JACK_COMPILER_DEBUG"), "true"),
 	}
-}
-
-func (ce *compilationEngine) debug(format string, v ...any) {
-	if !ce.isDebugEnabled {
-		return
-	}
-	_, file, no, ok := runtime.Caller(1)
-	if ok {
-		format = fmt.Sprintf("%s:%d %s", file, no, format)
-	}
-	log.Printf(format, v...)
 }
 
 func (ce *compilationEngine) compile() error {
@@ -44,130 +46,226 @@ func (ce *compilationEngine) compile() error {
 	// compile class
 	ce.compileClass()
 
-	// encode xml with indentation
-	decoder := xml.NewDecoder(strings.NewReader(ce.builder.String()))
-	encoder := xml.NewEncoder(ce.dstFile)
-	encoder.Indent("", "  ")
-
-	for {
-		tokenXml, err := decoder.RawToken()
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			ce.errorList = append(ce.errorList, err)
-			break
-		}
-
-		encoder.EncodeToken(tokenXml)
-	}
-
-	if err := encoder.Close(); err != nil {
-		ce.errorList = append(ce.errorList, err)
-	}
-
 	return errors.Join(ce.errorList...)
 }
 
 func (ce *compilationEngine) compileClass() {
 	// start token
 	ce.tknzr.advance()
-	ce.print("<class>")
+
+	// <class>
+	ce.check("class")
 	{
-		ce.process("class")
-		ce.process("className")
-		ce.process("{")
+		// save class name
+		ce.className = ce.tokenValue()
+		ce.check("className")
+		ce.check("{")
 		{
 			// classVarDec*
 			for ce.tknzr.token().lex == Keyword {
-				switch ce.tknzr.token().value {
+
+				var (
+					kind, name, ttype string
+				)
+
+				switch ce.tokenValue() {
 				case "static", "field":
-					ce.print("<classVarDec>")
-					ce.process(ce.tknzr.token().value) // static, field
-					ce.process("type")
-					ce.process("varName")
+					// <classVarDec>
+
+					// kind
+					kind = ce.tokenValue()
+					ce.check(ce.tokenValue()) // static, field
+
+					// type
+					ttype = ce.tokenValue()
+					ce.check("type")
+
+					// varName
+					name = ce.tokenValue()
+					ce.check("varName")
+
+					// add to class symbol level (0)
+					ce.symbolTable.define(name, ttype, kind)
+
 					// (','varName)*
-					for ce.tknzr.token().value == "," {
-						ce.process(",")
-						ce.process("varName")
+					for ce.tokenValue() == "," {
+						ce.check(",")
+
+						// varName
+						name = ce.tokenValue()
+						ce.check("varName")
+
+						// add to class symbol level (0)
+						ce.symbolTable.define(name, ttype, kind)
 					}
-					ce.process(";")
-					ce.print("</classVarDec>")
+					ce.check(";")
+					// </classVarDec>
 					continue
 				}
 				break // for
+			}
+
+			if ce.isDebugEnabled {
+				ce.symbolTable.debug()
 			}
 
 			// subroutineDec*
 			for ce.tknzr.token().lex == Keyword {
-				switch ce.tknzr.token().value {
+				switch ce.tokenValue() {
 				case "constructor", "function", "method":
-					ce.print("<subroutineDec>")
-					ce.process(ce.tknzr.token().value) // "constructor", "function", "method"
-					ce.process("void|type")
-					ce.process("subroutineName")
-					ce.process("(")
+
+					subroutineType := ce.tokenValue()
+
+					// <subroutineDec>
+
+					// next level
+					ce.symbolTable.next()
+
+					// "constructor", "function", "method"
+					ce.symbolTable.define("this", ce.className, "argument")
+					ce.check(ce.tokenValue())
+
+					if ce.tokenValue() == "void" {
+						ce.check("void")
+					} else {
+						ce.check("type")
+					}
+
+					subroutineName := fmt.Sprintf("%s.%s", ce.className, ce.tokenValue())
+					ce.check("subroutineName")
+					ce.check("(")
 					ce.compileParameterList()
-					ce.process(")")
+					ce.check(")")
+
+					// write function
+					switch subroutineType {
+					case "function":
+						ce.writer.writeFunction(subroutineName, ce.symbolTable.varCount("argument")-1)
+					case "method":
+						ce.writer.writeFunction(subroutineName, ce.symbolTable.varCount("argument"))
+						ce.writer.writePush("argument", 0)
+						ce.writer.writePop("pointer", 0)
+					case "constructor":
+						ce.writer.writeFunction(subroutineName, 0)
+						ce.writer.writePush("constant", ce.symbolTable.varCount("this"))
+						ce.writer.writeCall("Memory.alloc", 1)
+						ce.writer.writePop("pointer", 0)
+					}
+
 					ce.compileSubRoutineBody()
-					ce.print("</subroutineDec>")
+
+					if ce.isDebugEnabled {
+						ce.symbolTable.debug()
+					}
+
+					// previous level
+					ce.symbolTable.prev()
+
+					// </subroutineDec>
 					continue
 				}
 				break // for
 			}
 		}
-		ce.process("}")
+		ce.check("}")
+
+		if ce.isDebugEnabled {
+			ce.symbolTable.debug()
+		}
 	}
-	ce.print("</class>")
+	// </class>
 }
 
 func (ce *compilationEngine) compileParameterList() {
-	ce.print("<parameterList>")
+	// <parameterList>
 	{
-		if ce.tknzr.token().value != ")" {
-			ce.process("type")
-			ce.process("varName")
-			for ce.tknzr.token().value == "," {
-				ce.process(",")
-				ce.process("type")
-				ce.process("varName")
+		if ce.tokenValue() != ")" {
+
+			var (
+				name, ttype string
+			)
+
+			// type
+			ttype = ce.tokenValue()
+			ce.check("type")
+
+			// varName
+			name = ce.tokenValue()
+			ce.check("varName")
+
+			// add to symbol table
+			ce.symbolTable.define(name, ttype, "argument")
+
+			for ce.tokenValue() == "," {
+				ce.check(",")
+
+				// type
+				ttype = ce.tokenValue()
+				ce.check("type")
+
+				// varName
+				name = ce.tokenValue()
+				ce.check("varName")
+
+				// add to symbol table
+				ce.symbolTable.define(name, ttype, "argument")
 			}
-		} else {
-			ce.print("\n")
 		}
 	}
-	ce.print("</parameterList>")
+	// </parameterList>
 }
 
 func (ce *compilationEngine) compileSubRoutineBody() {
-	ce.print("<subroutineBody>")
+	// <subroutineBody>
 	{
-		ce.process("{")
+		ce.check("{")
 		{
-			for ce.tknzr.token().value == "var" {
-				ce.print("<varDec>")
-				ce.process("var")
-				ce.process("type")
-				ce.process("varName")
-				for ce.tknzr.token().value == "," {
-					ce.process(",")
-					ce.process("varName")
+			for ce.tokenValue() == "var" {
+
+				var (
+					name, ttype string
+				)
+
+				// <varDec>
+				ce.check("var")
+
+				// type
+				ttype = ce.tokenValue()
+				ce.check("type")
+
+				// varName
+				name = ce.tokenValue()
+				ce.check("varName")
+
+				// add to symbol table
+				ce.symbolTable.define(name, ttype, "local")
+
+				for ce.tokenValue() == "," {
+					ce.check(",")
+
+					// varName
+					name = ce.tokenValue()
+					ce.check("varName")
+
+					// add to symbol table
+					ce.symbolTable.define(name, ttype, "local")
 				}
-				ce.process(";")
-				ce.print("</varDec>")
+
+				ce.check(";")
+				// </varDec>
 			}
 			ce.compileStatements()
 		}
-		ce.process("}")
+		ce.check("}")
 	}
-	ce.print("</subroutineBody>")
+	// </subroutineBody>
 }
 
 func (ce *compilationEngine) compileStatements() {
-	ce.print("<statements>")
+	// <statements>
 	{
 		for ce.tknzr.hasMoreTokens() {
-			switch ce.tknzr.token().value {
+			switch ce.tokenValue() {
 			case "while":
 				ce.compileWhile()
 				continue // for
@@ -187,179 +285,294 @@ func (ce *compilationEngine) compileStatements() {
 			break // for
 		}
 	}
-	ce.print("</statements>")
+	// </statements>
 }
 
 func (ce *compilationEngine) compileLet() {
-	ce.print("<letStatement>")
+	// <letStatement>
 	{
-		ce.process("let")
-		ce.process("varName")
-		if ce.tknzr.token().value == "[" {
-			ce.process("[")
+		ce.check("let")
+		varName := ce.tknzr.token()
+		ce.check("varName")
+		if ce.tokenValue() == "[" {
+			ce.check("[")
 			ce.compileExpression()
-			ce.process("]")
+			ce.check("]")
 		}
-		ce.process("=")
+		ce.check("=")
 		ce.compileExpression()
-		ce.process(";")
+		ce.check(";")
+
+		if item, ok := ce.symbolTable.find(varName.value); ok {
+			// pop
+			ce.writer.writePop(item.kind, item.position)
+		} else {
+			ce.undeclared(varName)
+		}
 	}
-	ce.print("</letStatement>")
+	// </letStatement>
 }
 
 func (ce *compilationEngine) compileReturn() {
-	ce.print("<returnStatement>")
-	ce.process("return")
+	// <returnStatement>
+	ce.check("return")
 	// expression?
-	if ce.tknzr.token().value != ";" {
+	if ce.tokenValue() != ";" {
 		ce.compileExpression()
+	} else {
+		// no return variable
+		ce.writer.writePush("constant", 0)
 	}
-	ce.process(";")
-	ce.print("</returnStatement>")
+	ce.check(";")
+	// return
+	ce.writer.writeReturn()
+	// </returnStatement>
+}
+
+func (ce *compilationEngine) label() string {
+	value := strconv.Itoa(ce.labelsCounter)
+	ce.labelsCounter++
+	return fmt.Sprintf("%s_%s", ce.className, value)
 }
 
 func (ce *compilationEngine) compileIf() {
 
-	ce.print("<ifStatement>")
+	var (
+		labelA = ce.label()
+		labelB = ce.label()
+	)
+
+	// <ifStatement>
 	{
-		ce.process("if")
-		ce.process("(")
+		ce.check("if")
+		ce.check("(")
 		{
 			ce.compileExpression()
+			// not
+			ce.writer.writeUnaryOp("~")
+			// if-goto label A
+			ce.writer.writeIf(labelA)
 		}
-		ce.process(")")
-		ce.process("{")
+		ce.check(")")
+		ce.check("{")
 		{
 			ce.compileStatements()
 		}
-		ce.process("}")
+		ce.check("}")
 	}
 	{
 		// ('else''{statements'}')?
-		if ce.tknzr.token().value == "else" {
-			ce.process("else")
-			ce.process("{")
+		if ce.tokenValue() == "else" {
+
+			// goto label B
+			ce.writer.writeGoto(labelB)
+
+			ce.check("else")
+			ce.check("{")
 			{
+				// label A
+				ce.writer.writeLabel(labelA)
 				ce.compileStatements()
+				// label B
+				ce.writer.writeLabel(labelB)
 			}
-			ce.process("}")
+			ce.check("}")
+		} else {
+			// label A
+			ce.writer.writeLabel(labelA)
 		}
 	}
-	ce.print("</ifStatement>")
+	// </ifStatement>
 }
 
 func (ce *compilationEngine) compileWhile() {
 
-	ce.print("<whileStatement>")
+	var (
+		labelA = ce.label()
+		labelB = ce.label()
+	)
+
+	// <whileStatement>
 	{
-		ce.process("while")
-		ce.process("(")
+		// label A
+		ce.writer.writeLabel(labelA)
+
+		ce.check("while")
+		ce.check("(")
 		{
 			ce.compileExpression()
+			// not
+			ce.writer.writeUnaryOp("~")
+			// if-goto LB
+			ce.writer.writeIf(labelB)
 		}
-		ce.process(")")
-		ce.process("{")
+		ce.check(")")
+		ce.check("{")
 		{
 			ce.compileStatements()
+			// goto LA
+			ce.writer.writeGoto(labelA)
 		}
-		ce.process("}")
+		ce.check("}")
+
+		// label B
+		ce.writer.writeLabel(labelB)
+
 	}
-	ce.print("</whileStatement>")
+	// </whileStatement>
 }
 
 func (ce *compilationEngine) compileDo() {
-	ce.print("<doStatement>")
+	// <doStatement>
 	{
-		ce.process("do")
+		ce.check("do")
 		// subroutineCall
 		{
 			// term (without tag)
-			ce.compileTerm(false)
+			ce.compileTerm()
 
 			// optional (op term)*
 			for ce.tknzr.token().lex == Symbol {
-				switch ce.tknzr.token().value {
+				switch ce.tokenValue() {
 				// op
 				case "+", "-", "=", ">", "<", "*", "/", "&", "|":
-					ce.printXML(ce.tknzr.token())
+					//ce.printXML(ce.tknzr.token())
 					ce.tknzr.advance()
-					ce.compileTerm(true)
+					ce.compileTerm()
 					continue
 				}
 				break // for
 			}
 		}
-		ce.process(";")
+
+		// ignore returned value
+		ce.writer.writePop("temp", 0)
+
+		ce.check(";")
 	}
-	ce.print("</doStatement>")
+	// </doStatement>
 }
 
 func (ce *compilationEngine) compileExpression() {
-	ce.print("<expression>")
+	// <expression>
 	{
 		// term
-		ce.compileTerm(true)
+		ce.compileTerm()
 
 		// optional (op term)*
 		for ce.tknzr.token().lex == Symbol {
-			switch ce.tknzr.token().value {
+			switch ce.tokenValue() {
 			// op
 			case "+", "-", "=", ">", "<", "*", "/", "&", "|":
-				ce.printXML(ce.tknzr.token())
+				op := ce.tokenValue()
 				ce.tknzr.advance()
-				ce.compileTerm(true)
+				ce.compileTerm()
+				ce.writer.writeOp(op)
 				continue
 			}
 			break // for
 		}
 	}
-	ce.print("</expression>")
+
+	// </expression>
 }
 
-func (ce *compilationEngine) compileTerm(tag bool) {
-	if tag {
-		ce.print("<term>")
-	}
+func (ce *compilationEngine) compileTerm() {
+
+	// <term>
 	{
 		switch ce.tknzr.token().lex {
 		case Identifier:
-			ce.process("identifier") // varName, className, subroutineName
-			switch ce.tknzr.token().value {
+			// save varName
+			identifier := ce.tknzr.token()
+			ce.check("identifier") // varName, className, subroutineName
+			switch ce.tokenValue() {
 			case "[":
-				ce.process("[")
+				ce.check("[")
 				ce.compileExpression()
-				ce.process("]")
+				ce.check("]")
 			case "(":
-				ce.process("(")
-				ce.compileExpressionList()
-				ce.process(")")
+
+				target := ce.className
+				// push var
+				if objectTbl, ok := ce.symbolTable.find("this"); ok {
+					target = objectTbl.ttype
+					ce.writer.writePush(objectTbl.kind, objectTbl.position)
+				} else {
+					ce.undeclared(identifier)
+				}
+				methodName := fmt.Sprintf("%s.%s", target, identifier.value)
+
+				ce.check("(")
+				expN := ce.compileExpressionList()
+				ce.check(")")
+				// call f n
+				ce.writer.writeCall(methodName, expN+1)
 			case ".":
-				ce.process(".")
-				ce.process("subroutineName")
-				ce.process("(")
-				ce.compileExpressionList()
-				ce.process(")")
+				ce.check(".")
+				padding := 0
+				target := identifier.value
+				// push var
+				if objectTbl, ok := ce.symbolTable.find(identifier.value); ok {
+					padding = 1
+					target = objectTbl.ttype
+					ce.writer.writePush(objectTbl.kind, objectTbl.position)
+				} else if !jackOSAPI[target] {
+					ce.undeclared(identifier)
+				}
+				subroutineName := fmt.Sprintf("%s.%s", target, ce.tokenValue())
+				ce.check("subroutineName")
+				ce.check("(")
+				expN := ce.compileExpressionList()
+				ce.check(")")
+				// call f n
+				ce.writer.writeCall(subroutineName, expN+padding)
+			default:
+				// push var
+				if varTbl, ok := ce.symbolTable.find(identifier.value); ok {
+					ce.writer.writePush(varTbl.kind, varTbl.position)
+				} else {
+					ce.undeclared(identifier)
+				}
 			}
-		case IntConst, StringConst:
-			ce.process("constant")
+		case IntConst:
+			val, _ := strconv.Atoi(ce.tokenValue())
+			ce.writer.writePush("constant", val)
+			ce.check("constant")
+		case StringConst:
+			ce.check("constant")
+			// TODO
 		case Keyword: // keyword constant
-			switch ce.tknzr.token().value {
-			case "true", "false", "null", "this":
-				ce.process(ce.tknzr.token().value)
+			switch ce.tokenValue() {
+			case "true":
+				ce.check(ce.tokenValue())
+				// true
+				ce.writer.writePush("constant", 1)
+			case "false":
+				ce.check(ce.tokenValue())
+				// false
+				ce.writer.writePush("constant", -1)
+			case "null", "this":
+				ce.check(ce.tokenValue())
 			default:
 				ce.expected("keywordConstant")
 			}
 		case Symbol:
+
 			// (expression)
-			if ce.tknzr.token().value == "(" {
-				ce.process("(")
+			if ce.tokenValue() == "(" {
+				ce.check("(")
 				ce.compileExpression()
-				ce.process(")")
+				ce.check(")")
 
 				// unaryOp
-			} else if ce.tknzr.token().value == "-" || ce.tknzr.token().value == "~" {
-				ce.process(ce.tknzr.token().value) // unaryOp - ~
-				ce.compileTerm(true)
+			} else if ce.tokenValue() == "-" || ce.tokenValue() == "~" {
+				// unary op
+				unaryOp := ce.tokenValue()
+				ce.check(ce.tokenValue()) // unaryOp - ~
+				ce.compileTerm()
+				// unary op
+				ce.writer.writeUnaryOp(unaryOp)
 			} else {
 				ce.expected("parenthesis or unaryOp")
 			}
@@ -367,27 +580,28 @@ func (ce *compilationEngine) compileTerm(tag bool) {
 			ce.expected("varName or constant")
 		}
 	}
-	if tag {
-		ce.print("</term>")
-	}
+
+	// </term>
 }
 
-func (ce *compilationEngine) compileExpressionList() {
-	ce.print("<expressionList>")
+func (ce *compilationEngine) compileExpressionList() int {
+	// <expressionList>
+	cnt := 0
 	{
 		// handle empty expression list
-		if ce.tknzr.token().value != ")" {
+		if ce.tokenValue() != ")" {
+			cnt++
 			ce.compileExpression()
 			// (, expression)*
-			for ce.tknzr.token().value == "," {
-				ce.process(",")
+			for ce.tokenValue() == "," {
+				ce.check(",")
+				cnt++
 				ce.compileExpression()
 			}
-		} else {
-			ce.print("\n")
 		}
 	}
-	ce.print("</expressionList>")
+	return cnt
+	// </expressionList>
 }
 
 func (ce *compilationEngine) expected(expected any) {
@@ -395,57 +609,41 @@ func (ce *compilationEngine) expected(expected any) {
 	ce.errorList = append(ce.errorList, err)
 }
 
-func (ce *compilationEngine) processType() {
-	if ce.tknzr.token().lex == Keyword {
-		if ce.tknzr.token().value == "int" ||
-			ce.tknzr.token().value == "boolean" || ce.tknzr.token().value == "char" {
-			// type
-			ce.printXML(ce.tknzr.token())
-		} else {
-			ce.expected("type : int, boolean or char")
-		}
-	} else if ce.tknzr.token().lex == Identifier {
-		// className
-		ce.printXML(ce.tknzr.token())
-	} else {
-		ce.expected("type or className")
-	}
+func (ce *compilationEngine) undeclared(tkn *Token) {
+	err := fmt.Errorf("compiler error : undeclared var %s", tkn.String())
+	ce.errorList = append(ce.errorList, err)
 }
 
-func (ce *compilationEngine) process(expected string) {
-	ce.debug(expected)
+func (ce *compilationEngine) tokenValue() string {
+	return ce.tknzr.token().value
+}
+
+func (ce *compilationEngine) check(expected string) {
 	switch expected {
 	case "varName", "className", "subroutineName", "identifier":
-		if ce.tknzr.token().lex == Identifier {
-			ce.printXML(ce.tknzr.token())
-		} else {
+		if ce.tknzr.token().lex != Identifier {
 			ce.expected(expected)
 		}
 	case "constant":
-		if ce.tknzr.token().lex == StringConst || ce.tknzr.token().lex == IntConst {
-			ce.printXML(ce.tknzr.token())
-		} else {
+		if ce.tknzr.token().lex != StringConst && ce.tknzr.token().lex != IntConst {
 			ce.expected(expected)
 		}
 	case "constructor", "function", "method":
-		if ce.tknzr.token().lex == Keyword {
-			ce.printXML(ce.tknzr.token())
-		} else {
+		if ce.tknzr.token().lex != Keyword {
 			ce.expected(expected)
 		}
-
-	case "void|type":
-		if ce.tknzr.token().lex == Keyword && ce.tknzr.token().value == "void" {
-			ce.printXML(ce.tknzr.token())
-		} else {
-			ce.processType()
-		}
 	case "type":
-		ce.processType()
+		if ce.tknzr.token().lex == Keyword {
+			if ce.tokenValue() != "int" &&
+				ce.tokenValue() != "boolean" && ce.tokenValue() != "char" {
+				ce.expected("type : int, boolean or char")
+			}
+		} else if ce.tknzr.token().lex != Identifier {
+			// className
+			ce.expected("type or className")
+		}
 	default:
-		if expected == ce.tknzr.token().value {
-			ce.printXML(ce.tknzr.token())
-		} else {
+		if expected != ce.tokenValue() {
 			ce.expected(expected)
 		}
 	}
@@ -454,12 +652,8 @@ func (ce *compilationEngine) process(expected string) {
 	ce.tknzr.advance()
 }
 
-func (ce *compilationEngine) print(value string) {
-	_, _ = ce.builder.WriteString(value)
-}
-
-func (ce *compilationEngine) printXML(token *Token) {
-	ce.print(fmt.Sprintf("<%s> ", token.lex))
-	_ = xml.EscapeText(ce.builder, []byte(token.value))
-	ce.print(fmt.Sprintf(" </%s>", token.lex))
+func (ce *compilationEngine) debug() {
+	if !ce.isDebugEnabled {
+		return
+	}
 }

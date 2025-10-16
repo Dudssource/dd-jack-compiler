@@ -2,20 +2,21 @@ function Bullet.new 0
 	push constant 3
 	call Memory.alloc 1
 	pop pointer 0
-	push argument 1
-	pop this 0
-	push argument 2
-	pop this 1
-	push argument 3
-	pop this 2
 	push argument 0
+	pop this 0
+	push argument 1
+	pop this 1
+	push argument 2
+	pop this 2
+	push pointer 0
 	call Bullet.draw 1
 	pop temp 0
+	push pointer 0
 	return
-function Bullet.dispose 1
+function Bullet.dispose 0
 	push argument 0
 	pop pointer 0
-	push constant -1
+	push constant 0
 	call Screen.setColor 1
 	pop temp 0
 	push this 0
@@ -29,44 +30,49 @@ function Bullet.dispose 1
 	call Screen.drawRectangle 4
 	pop temp 0
 	push constant 1
+	neg
 	call Screen.setColor 1
 	pop temp 0
+	push pointer 0
 	call Memory.deAlloc 1
 	pop temp 0
 	push constant 0
 	return
-function Bullet.gone 1
+function Bullet.gone 0
 	push argument 0
 	pop pointer 0
 	push this 1
 	push constant 0
 	gt
 	not
-	if-goto Bullet_0
-	push constant -1
+	if-goto Bullet_1
+	push constant 0
 	return
+	goto Bullet_0
+label Bullet_1
 label Bullet_0
 	push constant 1
+	neg
 	return
-function Bullet.getX 1
+function Bullet.getX 0
 	push argument 0
 	pop pointer 0
 	push this 0
 	return
-function Bullet.getY 1
+function Bullet.getY 0
 	push argument 0
 	pop pointer 0
 	push this 1
 	return
-function Bullet.moveUp 1
+function Bullet.moveUp 2
 	push argument 0
 	pop pointer 0
 	push this 1
 	push constant 1
 	gt
 	not
-	if-goto Bullet_2
-	push constant -1
+	if-goto Bullet_3
+	push constant 0
 	call Screen.setColor 1
 	pop temp 0
 	push this 0
@@ -88,6 +94,7 @@ function Bullet.moveUp 1
 	sub
 	pop this 1
 	push constant 1
+	neg
 	call Screen.setColor 1
 	pop temp 0
 	push this 0
@@ -100,17 +107,18 @@ function Bullet.moveUp 1
 	add
 	call Screen.drawRectangle 4
 	pop temp 0
-	goto Bullet_3
-label Bullet_2
-	push constant 0
-	pop this 1
+	goto Bullet_2
 label Bullet_3
 	push constant 0
+	pop this 1
+label Bullet_2
+	push constant 0
 	return
-function Bullet.draw 1
+function Bullet.draw 0
 	push argument 0
 	pop pointer 0
 	push constant 1
+	neg
 	call Screen.setColor 1
 	pop temp 0
 	push this 0

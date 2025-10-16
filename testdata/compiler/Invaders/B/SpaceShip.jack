@@ -1,0 +1,290 @@
+// This file is part of DD JACK Invaders.
+// Copyright (C) 2025-2025 Eduardo <dudssource@gmail.com>
+//
+// DD JACK Invaders is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// DD JACK Invaders is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with DD JACK Invaders.  If not, see <http://www.gnu.org/licenses/>.
+
+/** Implements a space ship, it's mid-air bullets and enemies. */
+class SpaceShip {
+
+   field int x, y;         // screen location of the top-left corner of this square
+   field Array bullets;    // mid-air bullets
+   field int bulletsCount; // count of mid-air bullets
+   field int bulletSize;   // bullet size
+   field Array enemies;    // game enemies
+   field int enemiesCount; // beginning enemies
+   field int alienSize;    // size of alien sprite
+   field int enemiesHit;   // enemies hit (score)
+   field int enemiesSpeed; // enemies speed
+   field int enemiesDelay; // used to delay enemies animation
+
+   /** Constructs and draws a new space ship with a given location. */
+   constructor SpaceShip new(int ax, int ay) {
+      let x = ax;
+      let y = ay;
+      let bulletsCount = 10;                 // max mid-air bullets
+      let bullets = Array.new(bulletsCount); // max bullets
+
+      let enemiesCount = 8;                  // enemies count
+      let enemies = Array.new(enemiesCount); // enemies
+
+      let bulletSize = 5;     // bullet size
+      let enemiesHit = 0;     // enemies hit
+      let enemiesDelay = 4;   // delay enemies by N moves
+      let enemiesSpeed = 2;   // initial speed
+      let alienSize = 32;     // alien size
+
+      do init(); // init ship arrays (enemies and bullets)
+      do draw(); // draw ship
+
+      return this;
+   }
+
+   /** Initializes bullets and enemies **/
+   method void init() {
+      var int i;
+      let i = 0;
+      // initialize bullets array
+      while (i < bulletsCount) {
+         let bullets[i] = null;
+         let i = i + 1;
+      }
+      do initEnemies(); // creates first enemies
+      return;
+   }
+
+   /** Initializes enemies **/
+   method void initEnemies() {
+      var int i, enemyX, enemyY;
+      var Alien enemy;
+      let i = 0;
+      let enemyX = 16;
+      let enemyY = 16;
+      // initialize enemies array
+      while (i < enemiesCount) {
+         let enemy = Alien.new(enemyX, enemyY, alienSize, enemiesSpeed);
+         let enemyX = enemyX + (2 * alienSize);
+         let enemies[i] = enemy;
+         let i = i + 1;
+      }
+      return;
+   }
+
+   /** Disposes the Space Ship. */
+   method void dispose() {
+      var int i;
+      var Bullet bullet;
+      var Alien enemy;
+      let i = 0;
+      while (i < bulletsCount) {
+         let bullet = bullets[i];
+         if (~(bullet = null)) {
+            do bullet.dispose();
+         }
+         let i = i + 1;
+      }
+      do bullets.dispose();
+      let i = 0;
+      while (i < enemiesCount) {
+         let enemy = enemies[i];
+         if (~(enemy = null)) {
+            do enemy.dispose();
+         }
+         let i = i + 1;
+      }
+      do enemies.dispose();
+      do Memory.deAlloc(this);
+      return;
+   }
+
+   /** Dras this current Space Ship sprite at the current position **/
+   method void draw() {
+
+      var int memAddress; 
+
+      // clear ship
+      do Screen.setColor(false);
+      do Screen.drawRectangle(0, y, 511, 232);
+
+      let memAddress = 16384+((32*y)+(x/16));
+
+      // column 0
+      do Memory.poke(memAddress, 3072);
+      do Memory.poke(memAddress +32, 7680);
+      do Memory.poke(memAddress +64, 16128);
+      do Memory.poke(memAddress +96, 32640);
+      do Memory.poke(memAddress +128, 29568);
+      do Memory.poke(memAddress +160, 29568);
+      do Memory.poke(memAddress +192, 29568);
+      do Memory.poke(memAddress +224, 29568);
+      do Memory.poke(memAddress +256, 32640);
+      do Memory.poke(memAddress +288, 32640);
+      do Memory.poke(memAddress +320, 32640);
+      do Memory.poke(memAddress +352, -64);
+      do Memory.poke(memAddress +384, -32);
+      do Memory.poke(memAddress +416, -3088);
+      do Memory.poke(memAddress +448, -7688);
+      do Memory.poke(memAddress +480, -3076);
+      do Memory.poke(memAddress +512, 32670);
+      do Memory.poke(memAddress +544, 16143);
+      do Memory.poke(memAddress +576, 13059);
+      do Memory.poke(memAddress +608, 4657);
+      do Memory.poke(memAddress +640, 48);
+      do Memory.poke(memAddress +672, 3120);
+      do Memory.poke(memAddress +704, 3072);
+      do Memory.poke(memAddress +736, 3072);
+      // column 1
+      do Memory.poke(memAddress +385, 1);
+      do Memory.poke(memAddress +417, 3);
+      do Memory.poke(memAddress +449, 7);
+      do Memory.poke(memAddress +481, 15);
+      do Memory.poke(memAddress +513, 30);
+      do Memory.poke(memAddress +545, 60);
+      do Memory.poke(memAddress +577, 48);
+      do Memory.poke(memAddress +609, 35);
+      do Memory.poke(memAddress +641, 3);
+      do Memory.poke(memAddress +673, 3);
+      return;
+   }
+
+   /** Detects a collision between the ship bullet and the alien enemy **/
+   method boolean isCollision(int bulletx, int bullety, int alienx, int alieny) {
+      var boolean c1, c2, c3, c4;
+      let c1 = ((bulletx > alienx) & (bulletx < (alienx + alienSize)));
+      let c2 = (((bulletx + bulletSize) > alienx) & ((bulletx + bulletSize) < (alienx + alienSize)));
+      let c3 = ((bullety > alieny) & (bullety < (alieny + alienSize)));
+      let c4 = (((bullety + bulletSize) > alieny) & ((bullety + bulletSize) < (alieny + alienSize)));
+
+      if ((c1 | c2) & (c3 | c4)) {
+         return true;
+      }
+
+      return false;
+   }
+
+   /** Draw the mid-air bullets, also detects collisions and update score board **/
+   method void drawBullets() {
+      var int i, j;
+      var Bullet bullet;
+      var Alien enemy;
+      var boolean gone, collision;
+      let gone = false;
+      let i = 0;
+      while (i < bulletsCount) { // mid-air bullets
+         let bullet = bullets[i];
+         if (~(bullet = null)) {
+            let gone = bullet.gone(); // bullet out of screen
+            if (gone) {
+               do bullet.dispose();
+               let bullets[i] = null;
+            } else {
+               do bullet.moveUp(); // move bullet up
+               let j = 0;
+               while (j < enemiesCount) { // on screen enemies
+                  let enemy = enemies[j];
+                  if (~(enemy = null)) {
+                     let collision = isCollision(bullet.getX(), bullet.getY(), enemy.getX(), enemy.getY()); // detect collision
+                     if (collision) {
+                        do enemy.dispose(); // enemy down, must clean memory
+                        let enemies[j] = null;
+
+                        do bullet.dispose(); // clean bullet as well
+                        let bullets[i] = null;
+
+                        let enemiesHit = enemiesHit + 1; // used for score board
+                        do Output.moveCursor(22, 58);
+                        do Output.printInt(enemiesHit); // update board
+                     }
+                  }
+                  let j = j + 1;
+               } // while enemies
+            }
+         }
+         let i = i + 1;
+      } // while bullets
+      return;
+   }
+
+   /** Moves enemies down and check for game over **/
+   method boolean moveEnemies() {
+      var int j, r, l;
+      var Alien enemy;
+      if (enemiesDelay > 0) { // pseudo delay to optimize rendering
+         let enemiesDelay = enemiesDelay - 1;
+         return false;
+      }
+      let l = 0;
+      let j = 0;
+      let enemiesDelay = 4; // reset delay
+      while (j < enemiesCount) {
+         let enemy = enemies[j];
+         if (~(enemy = null)) {
+            do enemy.moveDown(); // move enemy
+            let l = enemy.getY() + enemy.getSize(); // enemy position
+         } else {
+            let r = r + 1;
+         }
+         let j = j + 1;
+      }
+      if (r = enemiesCount) { // no enemies on screen
+         do Output.moveCursor(22, 48);
+         do Output.printInt(enemiesSpeed); // update board
+         let enemiesSpeed = enemiesSpeed + 1; // increase level/speed
+         do initEnemies(); // no enemies found, restart enemies
+      } else {
+         // game over
+         if (l > 197) {
+            return true;
+         }
+      }
+      return false;
+   }
+
+   /** Moves the ship left by 1 pixels (if possible). */
+   method void moveLeft() {
+      if ((x - 16) > 0) {
+         let x = x - 16;
+         do draw();
+      }
+      return;
+   }
+
+   /** Moves the ship right by 1 pixels (if possible). */
+   method void moveRight() {
+      if ((x + 16) < 482) {
+         let x = x + 16;
+         do draw();
+      }
+      return;
+   }
+
+   /** Fires a bullet from ship, dinamically finding a slot on the enemies Array **/
+   method void fire() {
+      var int i;
+      var Bullet slot, bullet;
+      var boolean freeSlot;
+      let i = 0;
+      let freeSlot = false;
+      while ((~(freeSlot)) & (i < bulletsCount)) {
+         let slot = bullets[i];
+         if (slot = null) {
+            let bullet = Bullet.new(x + 8, y - 8, bulletSize); // starts at current ship position
+            let bullets[i] = bullet;
+            let freeSlot = true; // end while
+            do bullet.draw(); // draw bullet
+         }
+         let i = i + 1;
+      } // while
+      return;
+   }
+}

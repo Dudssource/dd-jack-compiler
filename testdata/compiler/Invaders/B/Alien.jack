@@ -1,0 +1,134 @@
+// This file is part of DD JACK Invaders.
+// Copyright (C) 2025-2025 Eduardo <dudssource@gmail.com>
+//
+// DD JACK Invaders is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// DD JACK Invaders is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with DD JACK Invaders.  If not, see <http://www.gnu.org/licenses/>.
+/**
+ * An alien represents an enemy that the space must fight, enemies are added in a row, all together
+ * at some specified increasing speed.
+ */
+class Alien {
+    field int x, y;     // screen location of alien
+    field int size;     // enemy size
+    field int speed;    // speed of alien
+
+    /** Constructs and draws a new Alien (enemy) with a given location and size. */
+    constructor Alien new(int ax, int ay, int asize, int aspeed) {
+        let x = ax;
+        let y = ay;
+        let size = asize;
+        let speed = aspeed;
+        do draw();
+        return this;
+    }
+
+    /** Disposes this Alien. */
+    method void dispose() {
+        do erase();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    /** Get Alien size **/
+    method int getSize() {
+        return size;
+    }
+
+    /** Get X coordinate **/
+    method int getX() {
+        return x;
+    }
+
+    /** Get Y coordinate **/
+    method int getY() {
+        return y;
+    }
+
+    /** Draws the Alien sprite at the current position **/
+    method void draw() {
+
+        var int memAddress; 
+
+        // clear alien
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x, y, x + size, y + size);
+
+        let memAddress = 16384+((32*y)+(x/16));
+
+        // column 0
+        do Memory.poke(memAddress, 16);
+        do Memory.poke(memAddress +32, 16);
+        do Memory.poke(memAddress +64, 96);
+        do Memory.poke(memAddress +96, 64);
+        do Memory.poke(memAddress +128, 192);
+        do Memory.poke(memAddress +160, -256);
+        do Memory.poke(memAddress +192, -128);
+        do Memory.poke(memAddress +224, -64);
+        do Memory.poke(memAddress +256, -1568);
+        do Memory.poke(memAddress +288, -1552);
+        do Memory.poke(memAddress +320, -1540);
+        do Memory.poke(memAddress +352, -4);
+        do Memory.poke(memAddress +384, -2);
+        do Memory.poke(memAddress +416, -1);
+        do Memory.poke(memAddress +448, -1);
+        do Memory.poke(memAddress +480, -8);
+        do Memory.poke(memAddress +512, 3264);
+        do Memory.poke(memAddress +544, 3264);
+        do Memory.poke(memAddress +576, 3264);
+        do Memory.poke(memAddress +608, 3264);
+        do Memory.poke(memAddress +640, 816);
+        do Memory.poke(memAddress +672, 952);
+        // column 1
+        do Memory.poke(memAddress +1, 512);
+        do Memory.poke(memAddress +33, 512);
+        do Memory.poke(memAddress +65, 384);
+        do Memory.poke(memAddress +97, 128);
+        do Memory.poke(memAddress +129, 192);
+        do Memory.poke(memAddress +161, 63);
+        do Memory.poke(memAddress +193, 127);
+        do Memory.poke(memAddress +225, 255);
+        do Memory.poke(memAddress +257, 487);
+        do Memory.poke(memAddress +289, 999);
+        do Memory.poke(memAddress +321, 4071);
+        do Memory.poke(memAddress +353, 4095);
+        do Memory.poke(memAddress +385, 8191);
+        do Memory.poke(memAddress +417, 16383);
+        do Memory.poke(memAddress +449, 16383);
+        do Memory.poke(memAddress +481, 2047);
+        do Memory.poke(memAddress +513, 204);
+        do Memory.poke(memAddress +545, 204);
+        do Memory.poke(memAddress +577, 204);
+        do Memory.poke(memAddress +609, 204);
+        do Memory.poke(memAddress +641, 816);
+        do Memory.poke(memAddress +673, 1904);
+        return;
+    }
+
+    /** Moves the Alien down by 2 pixels (if possible). */
+    method void moveDown() {
+        if ((y + size) < 254) {
+            do Screen.setColor(false);
+            do Screen.drawRectangle(x, y, x + size, y + speed);
+            let y = y + speed; // add speed
+            do draw();
+        }
+        return;
+    }
+
+    /** Erase the current Alien **/
+    method void erase() {
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x, y, x + size, y + size);
+        return;
+    }
+}

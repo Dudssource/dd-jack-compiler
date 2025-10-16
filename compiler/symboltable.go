@@ -55,18 +55,18 @@ func (s *symbolTable) indexOf(name string) int {
 func (s *symbolTable) debug() {
 
 	cnt := s.currentTbl
-	fmt.Printf(" -----------------------------------\n")
-	fmt.Printf("| \t \t LVL[%d] \t    |\n", cnt)
-	fmt.Printf(" -----------------------------------\n")
-	fmt.Printf("| NAME \t| TYPE \t| KIND  \t| # | \n")
+	fmt.Printf(" ------------------------------------------------------------------------\n")
+	fmt.Printf("| %-70s |\n", fmt.Sprintf("LVL[%d]", cnt))
+	fmt.Printf(" ------------------------------------------------------------------------\n")
+	fmt.Printf("| %-20s | %-20s | %-20s | # | \n", "NAME", "TYPE", "KIND")
 	for cnt >= 0 {
 		tbl := s.tbl[cnt]
 		for _, val := range tbl.items {
-			fmt.Printf("| %s\t| %s\t| %s\t| %d |\n", val.name, val.ttype, val.kind, val.position)
+			fmt.Printf("| %-20s | %-20s | %-20s | %d |\n", val.name, val.ttype, val.kind, val.position)
 		}
 		cnt--
 	}
-	fmt.Printf(" -----------------------------------\n\n")
+	fmt.Printf(" ------------------------------------------------------------------------\n\n")
 }
 
 func (s *symbolTable) varCount(kind string) int {
@@ -101,6 +101,8 @@ func (s *symbolTable) next() {
 }
 
 func (s *symbolTable) prev() {
+	s.tbl[s.currentTbl].items = make(map[string]tableItem)
+	s.tbl[s.currentTbl].segmentCounter = make(map[string]int)
 	s.currentTbl--
 }
 

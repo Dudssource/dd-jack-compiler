@@ -1,6 +1,6 @@
 # Jack Compiler (Golang)
 
-Simple (zero dependency), partially (only syntax and grammar implemented) working implementation of the Jack Compiler for the HACK VM language, as part of the course [Nand to Tetris](https://www.nand2tetris.org/), written in Golang.
+Simple (zero dependency), fully implemented, working implementation of the Jack Compiler for the HACK VM language, as part of the course [Nand to Tetris](https://www.nand2tetris.org/), written in Golang.
 
 ## Grammar
  
@@ -9,22 +9,22 @@ Simple (zero dependency), partially (only syntax and grammar implemented) workin
 
 ## How to use
 
-The `compiler/testdata` folder includes a few examples of valid Jack files and intermediante analysis (xml) files.
+The `testdata` folder includes a few examples of valid Jack (.jack) files and VM (.vm) files.
 
-In order to run the translator, the following is required:
+In order to run the compiler, the following is required:
 
 * Golang >= v1.25.0
 
 Example for single Jack files:
 
 ```shell
-go run main.go compiler/testdata/Main.jack
+go run main.go testdata/compiler/Seven/A/Main.jack
 ```
 
 Example for multi Jack file folder:
 
 ```shell
-go run main.go compiler/testdata/
+go run main.go testdata/compiler/Seven/A/
 ```
 
 Usage:
@@ -35,7 +35,7 @@ Usage of JackCompiler:
 		JackCompiler myProg/
 ```
 
-The program will generate an analysis XML file on the path `vm\testdata\FileName.xml` or `vm\testdata\jackFile.xml` in case of a folder.
+For every jack file, the program will generate a VM file on the same path `vm\testdata\FileName.vm`.
 
 ## Screenshot
 
@@ -49,9 +49,9 @@ Just run:
 
 ```shell
 # building
-docker build -t dd-jack-analyzer .
+docker build -t dd-jack-compiler .
 # running
-docker run -d dd-jack-analyzer
+docker run -d dd-jack-compiler
 # grab the container ID and run
 docker cp $CONTAINER:/app/JackCompiler .
 ```

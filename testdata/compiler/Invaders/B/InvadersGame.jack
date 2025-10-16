@@ -1,0 +1,106 @@
+// This file is part of DD JACK Invaders.
+// Copyright (C) 2025-2025 Eduardo <dudssource@gmail.com>
+//
+// DD JACK Invaders is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// DD JACK Invaders is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with DD JACK Invaders.  If not, see <http://www.gnu.org/licenses/>.
+/**
+ * Implements a simple Space Invaders game.
+ * This game presents a challenge where the user must destroy all alien enemies before they reach the base (Space Ship).
+ * The user controls the ship as follows:
+ * 2 arrow keys are used to move the square left and right.
+ * The 'space' key is used to fire at the enemies.
+ * As the game proceeds (when all enemies were destroyed), the speed of the new enemies increases (indefinetely).
+ * The 'q' key is used to quit the game.
+ */
+class InvadersGame {
+   field SpaceShip ship; // the space ship
+   field int direction; // 1=right 2=left
+
+   /** Constructs a new invaders game. */
+   constructor InvadersGame new() {
+      // The initial space is located at the center of the screen.
+      let ship = SpaceShip.new(256, 200);
+      let direction = 0;
+      return this;
+   }
+
+   /** Disposes this game. */
+   method void dispose() {
+      do ship.dispose();
+      do Memory.deAlloc(this);
+      return;
+   }
+
+   /** Draws the initial score board**/
+   method void drawScore() {
+      do Screen.setColor(true);
+      do Screen.drawRectangle(0, 235, 511, 237);
+      do Output.moveCursor(22, 42);
+      do Output.printString("SPEED 1");
+      do Output.moveCursor(22, 52);
+      do Output.printString("SCORE 0");
+      return;
+   }
+
+   /** Moves the space ship in the desired direction. */
+   method void moveSpaceShip() {
+      if (direction = 1) { do ship.moveLeft(); }
+      if (direction = 2) { do ship.moveRight(); }
+      return;
+   }
+
+   /** Runs the game: handles the user's inputs and moves the ship and enemies accordingly */
+   method void run() {
+      var char key;  // the key currently pressed by the user
+      var boolean exit;
+      let exit = false;
+
+      do drawScore(); // draw score board
+      
+      while (~exit) {
+
+         // waits for a key to be pressed
+         while ((~(exit)) & (key = 0)) {
+            let key = Keyboard.keyPressed();
+            do ship.drawBullets(); // draw current bullets
+            let exit = ship.moveEnemies(); // move enemies
+            do Sys.wait(40);
+         }
+         if (key = 81)  { let exit = true; }       // q key
+         if (key = 130) { let direction = 1; }     // left arrow
+         if (key = 132) { let direction = 2; }     // right arrow
+         if (key = 32) { do ship.fire(); }         // space
+
+         // waits for the key to be released
+         while ((~(exit)) & (~(key = 0))) {
+            if (~(key = 32)) {
+               do moveSpaceShip(); // move space ship
+               let exit = ship.moveEnemies(); // move enemies
+            }
+            let key = Keyboard.keyPressed();
+            do ship.drawBullets(); // draw current bullets state
+            do Sys.wait(40); // delay rendering
+         }
+     } // while
+     
+     // game over message
+     do Output.moveCursor(10,27);
+     do Output.printString("Game Over");
+
+     // run
+     return;
+   }
+}
+
+
+

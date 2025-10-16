@@ -1,0 +1,251 @@
+function InvadersGame.new 0
+	push constant 2
+	call Memory.alloc 1
+	pop pointer 0
+	push constant 256
+	push constant 200
+	call SpaceShip.new 2
+	pop this 0
+	push constant 0
+	pop this 1
+	push pointer 0
+	return
+function InvadersGame.dispose 0
+	push argument 0
+	pop pointer 0
+	push this 0
+	call SpaceShip.dispose 1
+	pop temp 0
+	push pointer 0
+	call Memory.deAlloc 1
+	pop temp 0
+	push constant 0
+	return
+function InvadersGame.drawScore 0
+	push argument 0
+	pop pointer 0
+	push constant 1
+	neg
+	call Screen.setColor 1
+	pop temp 0
+	push constant 0
+	push constant 235
+	push constant 511
+	push constant 237
+	call Screen.drawRectangle 4
+	pop temp 0
+	push constant 22
+	push constant 42
+	call Output.moveCursor 2
+	pop temp 0
+	push constant 7
+	call String.new 1
+	push constant 83
+	call String.appendChar 2
+	push constant 80
+	call String.appendChar 2
+	push constant 69
+	call String.appendChar 2
+	push constant 69
+	call String.appendChar 2
+	push constant 68
+	call String.appendChar 2
+	push constant 32
+	call String.appendChar 2
+	push constant 49
+	call String.appendChar 2
+	call Output.printString 1
+	pop temp 0
+	push constant 22
+	push constant 52
+	call Output.moveCursor 2
+	pop temp 0
+	push constant 7
+	call String.new 1
+	push constant 83
+	call String.appendChar 2
+	push constant 67
+	call String.appendChar 2
+	push constant 79
+	call String.appendChar 2
+	push constant 82
+	call String.appendChar 2
+	push constant 69
+	call String.appendChar 2
+	push constant 32
+	call String.appendChar 2
+	push constant 48
+	call String.appendChar 2
+	call Output.printString 1
+	pop temp 0
+	push constant 0
+	return
+function InvadersGame.moveSpaceShip 0
+	push argument 0
+	pop pointer 0
+	push this 1
+	push constant 1
+	eq
+	not
+	if-goto InvadersGame_1
+	push this 0
+	call SpaceShip.moveLeft 1
+	pop temp 0
+	goto InvadersGame_0
+label InvadersGame_1
+label InvadersGame_0
+	push this 1
+	push constant 2
+	eq
+	not
+	if-goto InvadersGame_3
+	push this 0
+	call SpaceShip.moveRight 1
+	pop temp 0
+	goto InvadersGame_2
+label InvadersGame_3
+label InvadersGame_2
+	push constant 0
+	return
+function InvadersGame.run 2
+	push argument 0
+	pop pointer 0
+	push constant 0
+	pop local 1
+	push pointer 0
+	call InvadersGame.drawScore 1
+	pop temp 0
+label InvadersGame_4
+	push local 1
+	not
+	not
+	if-goto InvadersGame_5
+label InvadersGame_6
+	push local 1
+	not
+	push local 0
+	push constant 0
+	eq
+	and
+	not
+	if-goto InvadersGame_7
+	call Keyboard.keyPressed 0
+	pop local 0
+	push this 0
+	call SpaceShip.drawBullets 1
+	pop temp 0
+	push this 0
+	call SpaceShip.moveEnemies 1
+	pop local 1
+	push constant 40
+	call Sys.wait 1
+	pop temp 0
+	goto InvadersGame_6
+label InvadersGame_7
+	push local 0
+	push constant 81
+	eq
+	not
+	if-goto InvadersGame_9
+	push constant 1
+	neg
+	pop local 1
+	goto InvadersGame_8
+label InvadersGame_9
+label InvadersGame_8
+	push local 0
+	push constant 130
+	eq
+	not
+	if-goto InvadersGame_11
+	push constant 1
+	pop this 1
+	goto InvadersGame_10
+label InvadersGame_11
+label InvadersGame_10
+	push local 0
+	push constant 132
+	eq
+	not
+	if-goto InvadersGame_13
+	push constant 2
+	pop this 1
+	goto InvadersGame_12
+label InvadersGame_13
+label InvadersGame_12
+	push local 0
+	push constant 32
+	eq
+	not
+	if-goto InvadersGame_15
+	push this 0
+	call SpaceShip.fire 1
+	pop temp 0
+	goto InvadersGame_14
+label InvadersGame_15
+label InvadersGame_14
+label InvadersGame_16
+	push local 1
+	not
+	push local 0
+	push constant 0
+	eq
+	not
+	and
+	not
+	if-goto InvadersGame_17
+	push local 0
+	push constant 32
+	eq
+	not
+	not
+	if-goto InvadersGame_19
+	push pointer 0
+	call InvadersGame.moveSpaceShip 1
+	pop temp 0
+	push this 0
+	call SpaceShip.moveEnemies 1
+	pop local 1
+	goto InvadersGame_18
+label InvadersGame_19
+label InvadersGame_18
+	call Keyboard.keyPressed 0
+	pop local 0
+	push this 0
+	call SpaceShip.drawBullets 1
+	pop temp 0
+	push constant 40
+	call Sys.wait 1
+	pop temp 0
+	goto InvadersGame_16
+label InvadersGame_17
+	goto InvadersGame_4
+label InvadersGame_5
+	push constant 10
+	push constant 27
+	call Output.moveCursor 2
+	pop temp 0
+	push constant 9
+	call String.new 1
+	push constant 71
+	call String.appendChar 2
+	push constant 97
+	call String.appendChar 2
+	push constant 109
+	call String.appendChar 2
+	push constant 101
+	call String.appendChar 2
+	push constant 32
+	call String.appendChar 2
+	push constant 79
+	call String.appendChar 2
+	push constant 118
+	call String.appendChar 2
+	push constant 101
+	call String.appendChar 2
+	push constant 114
+	call String.appendChar 2
+	call Output.printString 1
+	pop temp 0
+	push constant 0
+	return

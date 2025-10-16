@@ -1,0 +1,827 @@
+function SpaceShip.new 0
+	push constant 11
+	call Memory.alloc 1
+	pop pointer 0
+	push argument 0
+	pop this 0
+	push argument 1
+	pop this 1
+	push constant 10
+	pop this 3
+	push this 3
+	call Array.new 1
+	pop this 2
+	push constant 8
+	pop this 6
+	push this 6
+	call Array.new 1
+	pop this 5
+	push constant 5
+	pop this 4
+	push constant 0
+	pop this 8
+	push constant 4
+	pop this 10
+	push constant 2
+	pop this 9
+	push constant 32
+	pop this 7
+	push pointer 0
+	call SpaceShip.init 1
+	pop temp 0
+	push pointer 0
+	call SpaceShip.draw 1
+	pop temp 0
+	push pointer 0
+	return
+function SpaceShip.init 1
+	push argument 0
+	pop pointer 0
+	push constant 0
+	pop local 0
+label SpaceShip_0
+	push local 0
+	push this 3
+	lt
+	not
+	if-goto SpaceShip_1
+	push local 0
+	push this 2
+	add
+	push constant 0
+	pop temp 0
+	pop pointer 1
+	push temp 0
+	pop that 0
+	push local 0
+	push constant 1
+	add
+	pop local 0
+	goto SpaceShip_0
+label SpaceShip_1
+	push pointer 0
+	call SpaceShip.initEnemies 1
+	pop temp 0
+	push constant 0
+	return
+function SpaceShip.initEnemies 4
+	push argument 0
+	pop pointer 0
+	push constant 0
+	pop local 0
+	push constant 16
+	pop local 1
+	push constant 16
+	pop local 2
+label SpaceShip_2
+	push local 0
+	push this 6
+	lt
+	not
+	if-goto SpaceShip_3
+	push local 1
+	push local 2
+	push this 7
+	push this 9
+	call Alien.new 4
+	pop local 3
+	push local 1
+	push constant 2
+	push this 7
+	call Math.multiply 2
+	add
+	pop local 1
+	push local 0
+	push this 5
+	add
+	push local 3
+	pop temp 0
+	pop pointer 1
+	push temp 0
+	pop that 0
+	push local 0
+	push constant 1
+	add
+	pop local 0
+	goto SpaceShip_2
+label SpaceShip_3
+	push constant 0
+	return
+function SpaceShip.dispose 3
+	push argument 0
+	pop pointer 0
+	push constant 0
+	pop local 0
+label SpaceShip_4
+	push local 0
+	push this 3
+	lt
+	not
+	if-goto SpaceShip_5
+	push local 0
+	push this 2
+	add
+	pop pointer 1
+	push that 0
+	pop local 1
+	push local 1
+	push constant 0
+	eq
+	not
+	not
+	if-goto SpaceShip_7
+	push local 1
+	call Bullet.dispose 1
+	pop temp 0
+	goto SpaceShip_6
+label SpaceShip_7
+label SpaceShip_6
+	push local 0
+	push constant 1
+	add
+	pop local 0
+	goto SpaceShip_4
+label SpaceShip_5
+	push this 2
+	call Array.dispose 1
+	pop temp 0
+	push constant 0
+	pop local 0
+label SpaceShip_8
+	push local 0
+	push this 6
+	lt
+	not
+	if-goto SpaceShip_9
+	push local 0
+	push this 5
+	add
+	pop pointer 1
+	push that 0
+	pop local 2
+	push local 2
+	push constant 0
+	eq
+	not
+	not
+	if-goto SpaceShip_11
+	push local 2
+	call Alien.dispose 1
+	pop temp 0
+	goto SpaceShip_10
+label SpaceShip_11
+label SpaceShip_10
+	push local 0
+	push constant 1
+	add
+	pop local 0
+	goto SpaceShip_8
+label SpaceShip_9
+	push this 5
+	call Array.dispose 1
+	pop temp 0
+	push pointer 0
+	call Memory.deAlloc 1
+	pop temp 0
+	push constant 0
+	return
+function SpaceShip.draw 1
+	push argument 0
+	pop pointer 0
+	push constant 0
+	call Screen.setColor 1
+	pop temp 0
+	push constant 0
+	push this 1
+	push constant 511
+	push constant 232
+	call Screen.drawRectangle 4
+	pop temp 0
+	push constant 16384
+	push constant 32
+	push this 1
+	call Math.multiply 2
+	push this 0
+	push constant 16
+	call Math.divide 2
+	add
+	add
+	pop local 0
+	push local 0
+	push constant 3072
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 32
+	add
+	push constant 7680
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 64
+	add
+	push constant 16128
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 96
+	add
+	push constant 32640
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 128
+	add
+	push constant 29568
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 160
+	add
+	push constant 29568
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 192
+	add
+	push constant 29568
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 224
+	add
+	push constant 29568
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 256
+	add
+	push constant 32640
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 288
+	add
+	push constant 32640
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 320
+	add
+	push constant 32640
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 352
+	add
+	push constant 64
+	neg
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 384
+	add
+	push constant 32
+	neg
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 416
+	add
+	push constant 3088
+	neg
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 448
+	add
+	push constant 7688
+	neg
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 480
+	add
+	push constant 3076
+	neg
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 512
+	add
+	push constant 32670
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 544
+	add
+	push constant 16143
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 576
+	add
+	push constant 13059
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 608
+	add
+	push constant 4657
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 640
+	add
+	push constant 48
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 672
+	add
+	push constant 3120
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 704
+	add
+	push constant 3072
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 736
+	add
+	push constant 3072
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 385
+	add
+	push constant 1
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 417
+	add
+	push constant 3
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 449
+	add
+	push constant 7
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 481
+	add
+	push constant 15
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 513
+	add
+	push constant 30
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 545
+	add
+	push constant 60
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 577
+	add
+	push constant 48
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 609
+	add
+	push constant 35
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 641
+	add
+	push constant 3
+	call Memory.poke 2
+	pop temp 0
+	push local 0
+	push constant 673
+	add
+	push constant 3
+	call Memory.poke 2
+	pop temp 0
+	push constant 0
+	return
+function SpaceShip.isCollision 4
+	push argument 0
+	pop pointer 0
+	push argument 1
+	push argument 3
+	gt
+	push argument 1
+	push argument 3
+	push this 7
+	add
+	lt
+	and
+	pop local 0
+	push argument 1
+	push this 4
+	add
+	push argument 3
+	gt
+	push argument 1
+	push this 4
+	add
+	push argument 3
+	push this 7
+	add
+	lt
+	and
+	pop local 1
+	push argument 2
+	push argument 4
+	gt
+	push argument 2
+	push argument 4
+	push this 7
+	add
+	lt
+	and
+	pop local 2
+	push argument 2
+	push this 4
+	add
+	push argument 4
+	gt
+	push argument 2
+	push this 4
+	add
+	push argument 4
+	push this 7
+	add
+	lt
+	and
+	pop local 3
+	push local 0
+	push local 1
+	or
+	push local 2
+	push local 3
+	or
+	and
+	not
+	if-goto SpaceShip_13
+	push constant 1
+	neg
+	return
+	goto SpaceShip_12
+label SpaceShip_13
+label SpaceShip_12
+	push constant 0
+	return
+function SpaceShip.drawBullets 6
+	push argument 0
+	pop pointer 0
+	push constant 0
+	pop local 4
+	push constant 0
+	pop local 0
+label SpaceShip_14
+	push local 0
+	push this 3
+	lt
+	not
+	if-goto SpaceShip_15
+	push local 0
+	push this 2
+	add
+	pop pointer 1
+	push that 0
+	pop local 2
+	push local 2
+	push constant 0
+	eq
+	not
+	not
+	if-goto SpaceShip_17
+	push local 2
+	call Bullet.gone 1
+	pop local 4
+	push local 4
+	not
+	if-goto SpaceShip_19
+	push local 2
+	call Bullet.dispose 1
+	pop temp 0
+	push local 0
+	push this 2
+	add
+	push constant 0
+	pop temp 0
+	pop pointer 1
+	push temp 0
+	pop that 0
+	goto SpaceShip_18
+label SpaceShip_19
+	push local 2
+	call Bullet.moveUp 1
+	pop temp 0
+	push constant 0
+	pop local 1
+label SpaceShip_20
+	push local 1
+	push this 6
+	lt
+	not
+	if-goto SpaceShip_21
+	push local 1
+	push this 5
+	add
+	pop pointer 1
+	push that 0
+	pop local 3
+	push local 3
+	push constant 0
+	eq
+	not
+	not
+	if-goto SpaceShip_23
+	push pointer 0
+	push local 2
+	call Bullet.getX 1
+	push local 2
+	call Bullet.getY 1
+	push local 3
+	call Alien.getX 1
+	push local 3
+	call Alien.getY 1
+	call SpaceShip.isCollision 5
+	pop local 5
+	push local 5
+	not
+	if-goto SpaceShip_25
+	push local 3
+	call Alien.dispose 1
+	pop temp 0
+	push local 1
+	push this 5
+	add
+	push constant 0
+	pop temp 0
+	pop pointer 1
+	push temp 0
+	pop that 0
+	push local 2
+	call Bullet.dispose 1
+	pop temp 0
+	push local 0
+	push this 2
+	add
+	push constant 0
+	pop temp 0
+	pop pointer 1
+	push temp 0
+	pop that 0
+	push this 8
+	push constant 1
+	add
+	pop this 8
+	push constant 22
+	push constant 58
+	call Output.moveCursor 2
+	pop temp 0
+	push this 8
+	call Output.printInt 1
+	pop temp 0
+	goto SpaceShip_24
+label SpaceShip_25
+label SpaceShip_24
+	goto SpaceShip_22
+label SpaceShip_23
+label SpaceShip_22
+	push local 1
+	push constant 1
+	add
+	pop local 1
+	goto SpaceShip_20
+label SpaceShip_21
+label SpaceShip_18
+	goto SpaceShip_16
+label SpaceShip_17
+label SpaceShip_16
+	push local 0
+	push constant 1
+	add
+	pop local 0
+	goto SpaceShip_14
+label SpaceShip_15
+	push constant 0
+	return
+function SpaceShip.moveEnemies 4
+	push argument 0
+	pop pointer 0
+	push this 10
+	push constant 0
+	gt
+	not
+	if-goto SpaceShip_27
+	push this 10
+	push constant 1
+	sub
+	pop this 10
+	push constant 0
+	return
+	goto SpaceShip_26
+label SpaceShip_27
+label SpaceShip_26
+	push constant 0
+	pop local 2
+	push constant 0
+	pop local 0
+	push constant 4
+	pop this 10
+label SpaceShip_28
+	push local 0
+	push this 6
+	lt
+	not
+	if-goto SpaceShip_29
+	push local 0
+	push this 5
+	add
+	pop pointer 1
+	push that 0
+	pop local 3
+	push local 3
+	push constant 0
+	eq
+	not
+	not
+	if-goto SpaceShip_31
+	push local 3
+	call Alien.moveDown 1
+	pop temp 0
+	push local 3
+	call Alien.getY 1
+	push local 3
+	call Alien.getSize 1
+	add
+	pop local 2
+	goto SpaceShip_30
+label SpaceShip_31
+	push local 1
+	push constant 1
+	add
+	pop local 1
+label SpaceShip_30
+	push local 0
+	push constant 1
+	add
+	pop local 0
+	goto SpaceShip_28
+label SpaceShip_29
+	push local 1
+	push this 6
+	eq
+	not
+	if-goto SpaceShip_33
+	push constant 22
+	push constant 48
+	call Output.moveCursor 2
+	pop temp 0
+	push this 9
+	call Output.printInt 1
+	pop temp 0
+	push this 9
+	push constant 1
+	add
+	pop this 9
+	push pointer 0
+	call SpaceShip.initEnemies 1
+	pop temp 0
+	goto SpaceShip_32
+label SpaceShip_33
+	push local 2
+	push constant 197
+	gt
+	not
+	if-goto SpaceShip_35
+	push constant 1
+	neg
+	return
+	goto SpaceShip_34
+label SpaceShip_35
+label SpaceShip_34
+label SpaceShip_32
+	push constant 0
+	return
+function SpaceShip.moveLeft 0
+	push argument 0
+	pop pointer 0
+	push this 0
+	push constant 16
+	sub
+	push constant 0
+	gt
+	not
+	if-goto SpaceShip_37
+	push this 0
+	push constant 16
+	sub
+	pop this 0
+	push pointer 0
+	call SpaceShip.draw 1
+	pop temp 0
+	goto SpaceShip_36
+label SpaceShip_37
+label SpaceShip_36
+	push constant 0
+	return
+function SpaceShip.moveRight 0
+	push argument 0
+	pop pointer 0
+	push this 0
+	push constant 16
+	add
+	push constant 482
+	lt
+	not
+	if-goto SpaceShip_39
+	push this 0
+	push constant 16
+	add
+	pop this 0
+	push pointer 0
+	call SpaceShip.draw 1
+	pop temp 0
+	goto SpaceShip_38
+label SpaceShip_39
+label SpaceShip_38
+	push constant 0
+	return
+function SpaceShip.fire 4
+	push argument 0
+	pop pointer 0
+	push constant 0
+	pop local 0
+	push constant 0
+	pop local 3
+label SpaceShip_40
+	push local 3
+	not
+	push local 0
+	push this 3
+	lt
+	and
+	not
+	if-goto SpaceShip_41
+	push local 0
+	push this 2
+	add
+	pop pointer 1
+	push that 0
+	pop local 1
+	push local 1
+	push constant 0
+	eq
+	not
+	if-goto SpaceShip_43
+	push this 0
+	push constant 8
+	add
+	push this 1
+	push constant 8
+	sub
+	push this 4
+	call Bullet.new 3
+	pop local 2
+	push local 0
+	push this 2
+	add
+	push local 2
+	pop temp 0
+	pop pointer 1
+	push temp 0
+	pop that 0
+	push constant 1
+	neg
+	pop local 3
+	push local 2
+	call Bullet.draw 1
+	pop temp 0
+	goto SpaceShip_42
+label SpaceShip_43
+label SpaceShip_42
+	push local 0
+	push constant 1
+	add
+	pop local 0
+	goto SpaceShip_40
+label SpaceShip_41
+	push constant 0
+	return

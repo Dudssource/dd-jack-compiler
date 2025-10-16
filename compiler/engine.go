@@ -122,7 +122,9 @@ func (ce *compilationEngine) compileClass() {
 					ce.symbolTable.next()
 
 					// "constructor", "function", "method"
-					ce.symbolTable.define("this", ce.className, "argument")
+					if subroutineType == "method" {
+						ce.symbolTable.define("this", ce.className, "argument")
+					}
 					ce.check(ce.tokenValue())
 
 					if ce.tokenValue() == "void" {
@@ -137,22 +139,7 @@ func (ce *compilationEngine) compileClass() {
 					ce.compileParameterList()
 					ce.check(")")
 
-					// write function
-					switch subroutineType {
-					case "function":
-						ce.writer.writeFunction(subroutineName, ce.symbolTable.varCount("argument")-1)
-					case "method":
-						ce.writer.writeFunction(subroutineName, ce.symbolTable.varCount("argument"))
-						ce.writer.writePush("argument", 0)
-						ce.writer.writePop("pointer", 0)
-					case "constructor":
-						ce.writer.writeFunction(subroutineName, 0)
-						ce.writer.writePush("constant", ce.symbolTable.varCount("this"))
-						ce.writer.writeCall("Memory.alloc", 1)
-						ce.writer.writePop("pointer", 0)
-					}
-
-					ce.compileSubRoutineBody()
+					ce.compileSubRoutineBody(subroutineName, subroutineType)
 
 					if ce.isDebugEnabled {
 						ce.symbolTable.debug()
@@ -215,7 +202,7 @@ func (ce *compilationEngine) compileParameterList() {
 	// </parameterList>
 }
 
-func (ce *compilationEngine) compileSubRoutineBody() {
+func (ce *compilationEngine) compileSubRoutineBody(subroutineName, subroutineType string) {
 	// <subroutineBody>
 	{
 		ce.check("{")
@@ -254,6 +241,22 @@ func (ce *compilationEngine) compileSubRoutineBody() {
 				ce.check(";")
 				// </varDec>
 			}
+
+			// write function
+			switch subroutineType {
+			case "function":
+				ce.writer.writeFunction(subroutineName, ce.symbolTable.varCount("local"))
+			case "method":
+				ce.writer.writeFunction(subroutineName, ce.symbolTable.varCount("local"))
+				ce.writer.writePush("argument", 0)
+				ce.writer.writePop("pointer", 0)
+			case "constructor":
+				ce.writer.writeFunction(subroutineName, 0)
+				ce.writer.writePush("constant", ce.symbolTable.varCount("this"))
+				ce.writer.writeCall("Memory.alloc", 1)
+				ce.writer.writePop("pointer", 0)
+			}
+
 			ce.compileStatements()
 		}
 		ce.check("}")
@@ -291,23 +294,38 @@ func (ce *compilationEngine) compileStatements() {
 func (ce *compilationEngine) compileLet() {
 	// <letStatement>
 	{
+		var isArray bool
 		ce.check("let")
 		varName := ce.tknzr.token()
 		ce.check("varName")
+
+		varTbl, ok := ce.symbolTable.find(varName.value)
+		if !ok {
+			ce.undeclared(varName)
+		}
+
 		if ce.tokenValue() == "[" {
+			isArray = true
 			ce.check("[")
 			ce.compileExpression()
 			ce.check("]")
+			// push
+			ce.writer.writePush(varTbl.kind, varTbl.position)
+			// add
+			ce.writer.writeOp("+")
 		}
 		ce.check("=")
 		ce.compileExpression()
 		ce.check(";")
 
-		if item, ok := ce.symbolTable.find(varName.value); ok {
+		if !isArray {
 			// pop
-			ce.writer.writePop(item.kind, item.position)
+			ce.writer.writePop(varTbl.kind, varTbl.position)
 		} else {
-			ce.undeclared(varName)
+			ce.writer.writePop("temp", 0)
+			ce.writer.writePop("pointer", 1)
+			ce.writer.writePush("temp", 0)
+			ce.writer.writePop("that", 0)
 		}
 	}
 	// </letStatement>
@@ -338,8 +356,8 @@ func (ce *compilationEngine) label() string {
 func (ce *compilationEngine) compileIf() {
 
 	var (
-		labelA = ce.label()
 		labelB = ce.label()
+		labelA = ce.label()
 	)
 
 	// <ifStatement>
@@ -357,31 +375,25 @@ func (ce *compilationEngine) compileIf() {
 		ce.check("{")
 		{
 			ce.compileStatements()
+			ce.writer.writeGoto(labelB)
 		}
 		ce.check("}")
 	}
+	// label A
+	ce.writer.writeLabel(labelA)
 	{
 		// ('else''{statements'}')?
 		if ce.tokenValue() == "else" {
-
-			// goto label B
-			ce.writer.writeGoto(labelB)
-
 			ce.check("else")
 			ce.check("{")
 			{
-				// label A
-				ce.writer.writeLabel(labelA)
 				ce.compileStatements()
-				// label B
-				ce.writer.writeLabel(labelB)
 			}
 			ce.check("}")
-		} else {
-			// label A
-			ce.writer.writeLabel(labelA)
 		}
 	}
+	// goto label B
+	ce.writer.writeLabel(labelB)
 	// </ifStatement>
 }
 
@@ -491,21 +503,27 @@ func (ce *compilationEngine) compileTerm() {
 				ce.check("[")
 				ce.compileExpression()
 				ce.check("]")
-			case "(":
-
-				target := ce.className
 				// push var
-				if objectTbl, ok := ce.symbolTable.find("this"); ok {
-					target = objectTbl.ttype
-					ce.writer.writePush(objectTbl.kind, objectTbl.position)
+				if varTbl, ok := ce.symbolTable.find(identifier.value); ok {
+					ce.writer.writePush(varTbl.kind, varTbl.position)
 				} else {
 					ce.undeclared(identifier)
 				}
-				methodName := fmt.Sprintf("%s.%s", target, identifier.value)
+				// add
+				ce.writer.writeOp("+")
+				// src
+				ce.writer.writePop("pointer", 1)
+				ce.writer.writePush("that", 0)
+			case "(":
 
+				// method refers to this
+				ce.writer.writePush("pointer", 0)
+				target := ce.className
+				methodName := fmt.Sprintf("%s.%s", target, identifier.value)
 				ce.check("(")
 				expN := ce.compileExpressionList()
 				ce.check(")")
+
 				// call f n
 				ce.writer.writeCall(methodName, expN+1)
 			case ".":
@@ -517,8 +535,9 @@ func (ce *compilationEngine) compileTerm() {
 					padding = 1
 					target = objectTbl.ttype
 					ce.writer.writePush(objectTbl.kind, objectTbl.position)
-				} else if !jackOSAPI[target] {
-					ce.undeclared(identifier)
+				} else if !jackOSAPI[target] && target != ce.className {
+					//ce.undeclared(identifier)
+					//TODO
 				}
 				subroutineName := fmt.Sprintf("%s.%s", target, ce.tokenValue())
 				ce.check("subroutineName")
@@ -540,20 +559,35 @@ func (ce *compilationEngine) compileTerm() {
 			ce.writer.writePush("constant", val)
 			ce.check("constant")
 		case StringConst:
+			// string value
+			str := ce.tokenValue()
 			ce.check("constant")
-			// TODO
+			ce.writer.writePush("constant", len(str))
+			ce.writer.writeCall("String.new", 1)
+			for _, c := range str {
+				ce.writer.writePush("constant", int(c))
+				ce.writer.writeCall("String.appendChar", 2)
+			}
 		case Keyword: // keyword constant
 			switch ce.tokenValue() {
 			case "true":
 				ce.check(ce.tokenValue())
 				// true
 				ce.writer.writePush("constant", 1)
+				// neg
+				ce.writer.writeUnaryOp("-")
 			case "false":
 				ce.check(ce.tokenValue())
 				// false
-				ce.writer.writePush("constant", -1)
-			case "null", "this":
+				ce.writer.writePush("constant", 0)
+			case "null":
 				ce.check(ce.tokenValue())
+				// zero
+				ce.writer.writePush("constant", 0)
+			case "this":
+				ce.check(ce.tokenValue())
+				// constructor return
+				ce.writer.writePush("pointer", 0)
 			default:
 				ce.expected("keywordConstant")
 			}
